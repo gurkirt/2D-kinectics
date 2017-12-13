@@ -1,6 +1,7 @@
-# Kinectics training on 1 GPU in 2Days
+# Kinectics training on 1 GPU
 This is [PyTorch](http://pytorch.org/) implementation of two stream network of action classification on [Kinetics](https://deepmind.com/research/open-source/open-source-datasets/kinetics/) dataset.
 We train two streams of networks independently on individual frames of RGB (appearence) and optical flow (flow) as inputs.
+
 
 ### Table of Contents
 - <a href='#installation'>Installation</a>
@@ -16,7 +17,8 @@ We train two streams of networks independently on individual frames of RGB (appe
 - Please install cv2 as well for your python. I recommend using anaconda 3.6 and menpo's opnecv3 package.
 - Clone this repository.
   * Note: We currently only support Python 3+ on Linux system
-- We also support [Visdom](https://github.com/facebookresearch/visdom) for visualization of loss and accuracy on subset of validation set during training!
+- We also support [Visdom](https://github.com/facebookresearch/visdom) 
+for visualization of loss and accuracy on subset of validation set during training!
   * To use Visdom in the browser: 
   ```Shell
   # First install Python server and client 
@@ -28,15 +30,17 @@ We train two streams of networks independently on individual frames of RGB (appe
 
 ## Dataset
 Kinetics dataset can be Downloaded using [Crawler](https://github.com/activitynet/ActivityNet/tree/master/Crawler/Kinetics).
-
-- Notes:
- * Use latest youtube-dl
- * Some video might be missing but you should be alright, if are able to download around 290K videos.
+<br>
+Notes:
+  * Use latest youtube-dl
+  * Some video might be missing but you should be alright, if are able to download around 290K videos.
 
 ##### Preprocess
-First we need to extra images out of videos using `ffmpeg` and resave the annotations.
-You can take help of scripts in `prep` folder in the repo.
-You can comute optical flow images using [optical-flow](https://github.com/gurkirt/optical-flow).
+First we need to extract images out of videos using `ffmpeg` and resave the annotations.
+<br>
+You can take help of scripts in `prep` folder in the repo to do both the things.
+<br>
+You need to compute optical flow images using [optical-flow](https://github.com/gurkirt/optical-flow).
 Compute `farneback` flow as it is much faster to compute and gives reasonable results. 
 You might want to run multiple processes in parallel. 
 
@@ -86,7 +90,7 @@ CUDA_VISIBLE_DEVICES=0 python3 test.py --root=/home/user/kinetics/ --input=rgb -
 ```
 -Note
   * By default it will compute frame-level scores and store them 
-  as well as compute frame-level `top1 & top3` accuracies 500K iteration.
+  as well as compute frame-level `top1 & top3` accuracies using model from 500K-th iteration.
   * There is a log file file created for frame-level evaluation.
 
 ##### Video-level evaluation
