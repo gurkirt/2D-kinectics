@@ -1,0 +1,4 @@
+.idea/*
+.idea/
+*.log
+__pycache__/
