@@ -40,14 +40,14 @@ def vggconv(in_channels, batch_norm=False):
     return layers
 
 
-def vggnet(pretrained=False, num_classes = 1000, global_models_dir = '', num_channels=3):
+def vggnet(pretrained=False, num_classes = 1000, global_models_dir = '', seq_len=1):
 
     r"""Inception v3 model architecture from
     `"Rethinking the Inception Architecture for Computer Vision" <http://arxiv.org/abs/1512.00567>`_.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-
+    num_channels = seq_len*3
     if pretrained:
         model = VGG16(vggconv(num_channels), num_classes)
         conv_path = global_models_dir + '/vgg16_reducedfc.pth'
@@ -59,7 +59,7 @@ def vggnet(pretrained=False, num_classes = 1000, global_models_dir = '', num_cha
         model.conv_base.load_state_dict(conv_dict)
         return model
     else:
-        return VGG16(vggconv(), num_classes)
+        return VGG16(vggconv(num_channels), num_classes)
 
 
 class VGG16(nn.Module):

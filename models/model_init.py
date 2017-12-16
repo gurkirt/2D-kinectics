@@ -8,17 +8,17 @@ def initialise_model(args):
     if args.arch.find('inceptionV3') > -1:
         if args.pretrained:
             print("=> using pre-trained model '{}'".format(args.arch))
-            model = inception_v3(num_classes=args.num_classes, pretrained=True, global_models_dir=args.global_models_dir, num_channels=args.seq_len*3)
+            model = inception_v3(num_classes=args.num_classes, pretrained=True, global_models_dir=args.global_models_dir, seq_len=args.seq_len)
         else:
             print("=> creating model '{}'".format(args.arch))
-            model = inception_v3(num_classes=args.num_classes, num_channels=args.seq_len*3)
+            model = inception_v3(num_classes=args.num_classes, seq_len=args.seq_len)
     elif args.arch.find('vgg') > -1:
         if args.pretrained:
             print("=> using pre-trained model '{}'".format(args.arch))
-            model = vggnet(num_classes=args.num_classes, pretrained=True, global_models_dir=args.global_models_dir, num_channels=args.seq_len*3)
+            model = vggnet(num_classes=args.num_classes, pretrained=True, global_models_dir=args.global_models_dir, seq_len=args.seq_len)
         else:
             print("=> creating model '{}'".format(args.arch))
-            model = vggnet(num_classes=args.num_classes, num_channels=args.seq_len*3)
+            model = vggnet(num_classes=args.num_classes, seq_len=args.seq_len)
     else:
         raise 'Spcify the correct model type'
 

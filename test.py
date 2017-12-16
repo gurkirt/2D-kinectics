@@ -33,7 +33,7 @@ parser.add_argument('--arch', '-a', metavar='ARCH', default='inceptionV3',
 ## parameters for dataloader
 parser.add_argument('--input', '-i', metavar='INPUT', default='rgb',
                     help='input image type')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--seq_len', default=1, type=int, metavar='N',
                     help='seqence length')
@@ -41,7 +41,7 @@ parser.add_argument('--gap', default=1, type=int, metavar='N',
                     help='gap between the input frame within a sequence')
 parser.add_argument('--frame_step', default=6, type=int, metavar='N',
                     help='sample every frame_step for for training')
-parser.add_argument('--test-iteration', default=500000, type=int, metavar='N',
+parser.add_argument('--test-iterations', default='500000,400000,300000,200000', type=str, metavar='N',
                     help='manual iterations number (useful on restarts)')
 
 ## parameter for optimizer
@@ -162,98 +162,101 @@ def main():
 
     args.num_classes = val_dataset.num_classes
 
-    save_filename = '{:s}/output_{:s}_{:06d}.pkl'.format(args.model_save_dir, subset, args.test_iteration)
-    if not os.path.isfile(save_filename):
-        print('Models will be cached in ', args.model_save_dir)
-        log_fid = open(args.model_save_dir + '/test_log.txt', 'w')
-        log_fid.write(args.exp_name + '\n')
-        for arg in vars(args):
-            print(arg, getattr(args, arg))
-            log_fid.write(str(arg) + ': ' + str(getattr(args, arg)) + '\n')
+    for test_iteration in [int(itr) for itr in args.test_iterations.split(',')]:
+        save_filename = '{:s}/output_{:s}_{:06d}.pkl'.format(args.model_save_dir, subset, test_iteration)
+        if not os.path.isfile(save_filename):
+            print('Models will be cached in ', args.model_save_dir)
+            log_fid = open(args.model_save_dir + '/test_log.txt', 'w')
+            log_fid.write(args.exp_name + '\n')
+            for arg in vars(args):
+                print(arg, getattr(args, arg))
+                log_fid.write(str(arg) + ': ' + str(getattr(args, arg)) + '\n')
 
-        model, criterion = initialise_model(args)
-        model_file_name = '{:s}/model_{:06d}.pth'.format(args.model_save_dir, args.test_iteration)
-        print('Loading model from ', model_file_name)
-        model_dict = torch.load(model_file_name)
-        if args.ngpu>1:
+            model, criterion = initialise_model(args)
+            model_file_name = '{:s}/model_{:06d}.pth'.format(args.model_save_dir, test_iteration)
+            print('Loading model from ', model_file_name)
+            model_dict = torch.load(model_file_name)
+            # if args.ngpu>1:
             model.load_state_dict(model_dict)
-        else:
-            model.load_my_state_dict(model_dict)
-        print('Done loading model')
-        model.eval()
-        log_fid.write(str(model))
-        batch_time = AverageMeter()
-        losses = AverageMeter()
-        top1 = AverageMeter()
-        top3 = AverageMeter()
-        # switch to evaluate mode
-        model.eval()
-        end = time.time()
-        allscores = dict()
-        print('Starting to Iterate')
-        for i, (batch, targets,  video_num, frame_nums) in enumerate(val_loader):
-            targets = targets.cuda(async=True)
-            input_var = torch.autograd.Variable(batch.cuda(async=True), volatile=True)
-            target_var = torch.autograd.Variable(targets, volatile=True)
+            # else:
+            #     model.load_my_state_dict(model_dict)
+            print('Done loading model')
+            model.eval()
+            log_fid.write(str(model))
+            batch_time = AverageMeter()
+            losses = AverageMeter()
+            top1 = AverageMeter()
+            top3 = AverageMeter()
+            # switch to evaluate mode
+            model.eval()
+            torch.cuda.synchronize()
+            end = time.perf_counter()
+            allscores = dict()
+            print('Starting to Iterate')
+            for i, (batch, targets,  video_num, frame_nums) in enumerate(val_loader):
+                targets = targets.cuda(async=True)
+                input_var = torch.autograd.Variable(batch.cuda(async=True), volatile=True)
+                target_var = torch.autograd.Variable(targets, volatile=True)
 
-            # compute output
-            output = model(input_var)
-            loss = criterion(output, target_var)
+                # compute output
+                output = model(input_var)
+                loss = criterion(output, target_var)
 
-            # measure accuracy and record loss
-            prec1, prec3 = accuracy(output.data, targets, topk=(1, 3))
-            losses.update(loss.data[0], batch.size(0))
-            top1.update(prec1[0], batch.size(0))
-            top3.update(prec3[0], batch.size(0))
+                # measure accuracy and record loss
+                prec1, prec3 = accuracy(output.data, targets, topk=(1, 3))
+                losses.update(loss.data[0], batch.size(0))
+                top1.update(prec1[0], batch.size(0))
+                top3.update(prec3[0], batch.size(0))
 
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
+                # measure elapsed time
+                torch.cuda.synchronize()
+                batch_time.update(time.perf_counter() - end)
+                end = time.perf_counter()
 
-            if i % args.print_freq == 0:
-                print('Test:   [{0}/{1}]'
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})'
-                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'
-                      'Prec@3 {top3.val:.3f} ({top3.avg:.3f})'.format(
-                       i, len(val_loader), batch_time=batch_time, loss=losses,
-                       top1=top1, top3=top3))
-            res_data = output.data.cpu().numpy()
-            # print('video_num type', video_num.type())
-            # print('frame_num type', frame_nums.type())
-            for k in range(res_data.shape[0]):
-                videoname = val_dataset.video_list[int(video_num[k])]
-                frame_num = int(frame_nums[k])
-                if videoname not in allscores.keys():
-                    allscores[videoname] = dict()
-                    allscores[videoname]['scores'] = np.zeros((100, val_dataset.num_classes), dtype=np.float)
-                    allscores[videoname]['fids'] = np.zeros(100, dtype=np.int16)
-                    allscores[videoname]['count'] = 0
+                if i % args.print_freq == 0:
+                    print('Test:   [{0}/{1}]'
+                          'Time {batch_time.val:.3f} ({batch_time.avg:.3f})'
+                          'Loss {loss.val:.4f} ({loss.avg:.4f})'
+                          'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'
+                          'Prec@3 {top3.val:.3f} ({top3.avg:.3f})'.format(
+                           i, len(val_loader), batch_time=batch_time, loss=losses,
+                           top1=top1, top3=top3))
+                res_data = output.data.cpu().numpy()
+                # print('video_num type', video_num.type())
+                # print('frame_num type', frame_nums.type())
+                for k in range(res_data.shape[0]):
+                    videoname = val_dataset.video_list[int(video_num[k])]
+                    frame_num = int(frame_nums[k])
+                    if videoname not in allscores.keys():
+                        allscores[videoname] = dict()
+                        allscores[videoname]['scores'] = np.zeros((100, val_dataset.num_classes), dtype=np.float)
+                        allscores[videoname]['fids'] = np.zeros(100, dtype=np.int16)
+                        allscores[videoname]['count'] = 0
 
-                scores = res_data[k, :]
+                    scores = res_data[k, :]
+                    count = allscores[videoname]['count']
+                    allscores[videoname]['scores'][count, :] = scores
+                    allscores[videoname]['fids'][count] = frame_num
+                    allscores[videoname]['count'] += 1
+            print(' * Prec@1 {top1.avg:.3f} Prec@3 {top3.avg:.3f}'.format(top1=top1, top3=top3))
+            print('Done FRAME LEVEL evaluation Con')
+
+            for videoname in allscores.keys():
                 count = allscores[videoname]['count']
-                allscores[videoname]['scores'][count, :] = scores
-                allscores[videoname]['fids'][count] = frame_num
-                allscores[videoname]['count'] += 1
-        print(' * Prec@1 {top1.avg:.3f} Prec@3 {top3.avg:.3f}'.format(top1=top1, top3=top3))
-        print('Done FRAME LEVEL evaluation Con')
+                allscores[videoname]['scores'] = allscores[videoname]['scores'][:count]
+                fids = allscores[videoname]['fids'][:count]
+                sortedfidsinds = np.argsort(fids)
+                fids = fids[sortedfidsinds]
+                allscores[videoname]['scores'] = allscores[videoname]['scores'][sortedfidsinds]
+                allscores[videoname]['fids'] = fids
 
-        for videoname in allscores.keys():
-            count = allscores[videoname]['count']
-            allscores[videoname]['scores'] = allscores[videoname]['scores'][:count]
-            fids = allscores[videoname]['fids'][:count]
-            sortedfidsinds = np.argsort(fids)
-            fids = fids[sortedfidsinds]
-            allscores[videoname]['scores'] = allscores[videoname]['scores'][sortedfidsinds]
-            allscores[videoname]['fids'] = fids
+            with open(save_filename, 'wb') as f:
+                pickle.dump(allscores,f)
+        else:
+            with open(save_filename, 'rb') as f:
+                allscores = pickle.load(f)
 
-        with open(save_filename, 'wb') as f:
-            pickle.dump(allscores,f)
-    else:
-        with open(save_filename, 'rb') as f:
-            allscores = pickle.load(f)
-
-    evaluate(allscores, val_dataset.annot_file, save_filename, subset)
+        evaluate(allscores, val_dataset.annot_file, save_filename, subset)
 
 
 def evaluate(allscores, annot_file, save_filename, subset):
@@ -270,7 +273,7 @@ def evaluate(allscores, annot_file, save_filename, subset):
     vdata['version'] = "KINETICS VERSION 1.0"
 
     K = 5
-    for classtopk in [10,20,30,50]:
+    for classtopk in [10,20,30,50,60,80,100,120,150]:
         outfilename = '{:s}-clstk-{:03d}.json'.format(save_filename[:-4], classtopk)
         print('outfile ', outfilename)
         print('Number of loaded', len(allscores.keys()))

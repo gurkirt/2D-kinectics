@@ -207,7 +207,8 @@ class KINETICS(data.Dataset):
         target = np.int64(imids[2])
         half_len = self.seq_len//2
         gap = self.gap
-        frame_nums = np.arange(frame_num-half_len*gap,frame_num-half_len*gap+1,gap)
+        frame_nums = np.arange(frame_num-half_len*gap,frame_num+half_len*gap+1,gap)
+        #print(frame_nums)
         assert len(frame_nums) == self.seq_len, ' frame indexs length should be the same as frame_nums'
         # if self.mode != 'test':
         imgs = []
@@ -215,10 +216,8 @@ class KINETICS(data.Dataset):
             path = self.img_path % '{:s}/{:05d}'.format(videoname, fn)
             imgs.append(self.loader(path))
         # pdb.set_trace()
-        # print(img)
+        #input_imgs = torch.FloatTensor(self.seq_len*3,input_size,input_size)
         params = None
-        #if not self.mode:
-        #   #pdb.set_trace()
         if self.transform is not None:
             for ind in range(self.seq_len):
                 if self.mode:
@@ -230,9 +229,9 @@ class KINETICS(data.Dataset):
         if self.seq_len == 1:
             input_imgs = imgs[0]
         else:
-            input_imgs = torch.stack(imgs, 0)
+            input_imgs = torch.cat(imgs, 0)
 
-        # print('Done Stacking', input.size())
+        #print('Done Stacking', input_imgs.size())
         # else:
         #     path = self.img_path % '{:s}/{:05d}'.format(videoname, frame_num)
         #     input = self.transform(self.loader(path))

@@ -5,28 +5,31 @@ Further modified to plug into our training module
 Author: Gurkirt Singh
 """
 
-import torch
+import torch, pdb
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 
 
-def inception_v3(pretrained=False, num_classes = 400, global_models_dir = '', num_channels=3):
+def inception_v3(pretrained=False, num_classes = 400, global_models_dir = '', seq_len=1):
 
     r"""Inception v3 model architecture from
     `"Rethinking the Inception Architecture for Computer Vision" <http://arxiv.org/abs/1512.00567>`_.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-
+    num_channels = seq_len*3
     if pretrained:
         model = Inception3(num_channels, num_classes=num_classes)
         model_path = global_models_dir + '/inception_v3.pth'
         print('=> From: ', model_path)
         print('MODEL TYPE is STD')
         model_dict = torch.load(model_path)
+        if num_channels == 3:
+            model.load_state_dict(model_dict)
+        else:
+            model.load_my_state_dict(model_dict, seq_len)
 
-        model.load_my_state_dict(model_dict)
         return model
 
     return Inception3(num_channels, num_classes=num_classes)
@@ -124,27 +127,28 @@ class Inception3(nn.Module):
 
         return x
 
-    def load_my_state_dict(self, state_dict):
+    def load_my_state_dict(self, state_dict, seq_len):
         own_state = self.state_dict()
-        # print(own_state.keys())
+        #print(own_state.keys())
+        #pdb.set_trace()
         for name, param in state_dict.items():
-            name2 = name.split('.')
-            new_name = ''
-            for k,subname in enumerate(name2):
-                if k>0:
-                    new_name += subname+'.'
-            new_name = new_name[:-1]
-            # print(name,' converted to ', new_name)
-            if name not in own_state.keys() and new_name not in own_state.keys():
-                print(name, 'parameter are not there in current model')
-                continue
-            if isinstance(param, Parameter):
-                # backwards compatibility for serialized parameters
-                param = param.data
             if name in own_state.keys():
-                own_state[name].copy_(param)
-            else:
-                own_state[new_name].copy_(param)
+                if isinstance(param, Parameter):
+                    # backwards compatibility for serialized parameters
+                    param = param.data
+
+                if name.find('Conv2d_1a_3x3') > -1 and not name.find('bn') > -1:
+                    param = param.repeat(1, seq_len, 1, 1)
+                    param = param / float(seq_len)
+
+                try:
+                    own_state[name].copy_(param)
+                except Exception:
+                    raise RuntimeError('While copying the parameter named {}, '
+                                       'whose dimensions in the model are {} and '
+                                       'whose dimensions in the checkpoint are {}.'
+                                       .format(name, own_state[name].size(), param.size()))
+
 
 
 class InceptionA(nn.Module):
