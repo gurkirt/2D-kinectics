@@ -21,13 +21,14 @@ def getscore(ground_truth_filename, prediction_filename, subset='val', verbose=T
                                              prediction_filename,
                                              subset=subset, verbose=verbose,
                                              check_status=True, top_k=1)
-    anet_classification.evaluate()
+    ap, hit_at_1, avg_hit_at_1 = anet_classification.evaluate()
 
     anet_classification = ANETclassification(ground_truth_filename,
                                              prediction_filename,
                                              subset=subset, verbose=verbose,
                                              check_status=True, top_k=5)
-    anet_classification.evaluate()
+    ap, hit_at_5, avg_hit_at_5 = anet_classification.evaluate()
+    return ap, hit_at_1,avg_hit_at_1, hit_at_5,avg_hit_at_5
 
 
 
@@ -77,18 +78,26 @@ parser.add_argument('--root', default='/mnt/mars-delta/',
 
 args = parser.parse_args()
 
-gtfile = '/nfs01/REGdata-SSD02/gurkirt/kinetics/hfiles/finalannots.json'
+root = args.root + args.dataset + '/'
+args.root = root
 
+gtfile = args.root+'hfiles/finalannots.json'
 exp_name = '{}-{}-{}-sl{:02d}-g{:d}-fs{:d}-{}-{:06d}'.format(args.dataset,
-                args.arch, args.input, args.seq_len, args.gap, args.frame_step, args.batch_size, int(args.lr * 1000000))
+                    args.arch, args.input, args.seq_len, args.gap, args.frame_step, args.batch_size, int(args.lr * 1000000))
+model_save_dir = root + 'cache/' + exp_name
 
-args.exp_name = exp_name
-args.root += args.dataset+'/'
-model_save_dir = args.root + 'cache/' + exp_name
+log_fid = open(model_save_dir+'/eval.log','w')
 
-save_filename = '{:s}/output_{:s}_{:06d}.pkl'.format(model_save_dir, 'val', args.test_iteration)
+for itr in reversed([200000, 300000, 400000, 500000]):
+    args.exp_name = exp_name
+    save_filename = '{:s}/output_{:s}_{:06d}.pkl'.format(model_save_dir, 'val', itr)
 
-for classtopk in [10, 30, 50]:
-    outfilename = '{:s}-clstk-{:03d}.json'.format(save_filename[:-4], classtopk)
-    print(outfilename)
-    getscore(gtfile, outfilename)
+    for classtopk in reversed([10, 20, 30, 50, 60, 80]):
+        outfilename = '{:s}-clstk-{:03d}.json'.format(save_filename[:-4], classtopk)
+        print(outfilename)
+        log_fid.write(outfilename+'\n')
+        ap, hit_at_1, avg_hit_at_1, hit_at_5, avg_hit_at_5 = getscore(gtfile, outfilename)
+        line = 'ap {:.4f} hit_at_1 {:.4f} avg_hit_at_1 {:.4f} hit_at_5 {:.4f} avg_hit_at_5 {:.4f}\n'.format(ap,
+                                                                hit_at_1, avg_hit_at_1, hit_at_5, avg_hit_at_5)
+        log_fid.write(line)
+        print(line)

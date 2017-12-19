@@ -18,7 +18,6 @@ import numpy as np
 import torch
 import torch.optim
 import torch.utils.data
-from torch.backends import cudnn
 import torchvision.transforms as transforms
 from models.model_init import initialise_model
 from data.kinetics import KINETICS
@@ -47,7 +46,7 @@ parser.add_argument('--gap', default=1, type=int, metavar='N',
                     help='gap between the input frame within a sequence')
 parser.add_argument('--frame_step', default=6, type=int, metavar='N',
                     help='sample every frame_step for for training')
-parser.add_argument('--max_iterations', default=450000, type=int, metavar='N',
+parser.add_argument('--max_iterations', default=400000, type=int, metavar='N',
                     help='number of total iterations to run')
 parser.add_argument('--start-iteration', default=0, type=int, metavar='N',
                     help='manual iterations number (useful on restarts)')
@@ -63,9 +62,9 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
-parser.add_argument('--stepvalues', default='200000,350000', type=str,
+parser.add_argument('--stepvalues', default='200000,300000', type=str,
                     help='Chnage the lr @')
-parser.add_argument('--gamma', default=0.2, type=float,
+parser.add_argument('--gamma', default=0.1, type=float,
                     help='Gamma update for SGD')
 
 ## logging parameters
@@ -205,15 +204,19 @@ def main():
 
 
     optimizer = torch.optim.SGD(params, args.lr, momentum=args.momentum)
+    scheduler = MultiStepLR(optimizer, milestones=args.stepvalues, gamma=args.gamma)
 
     if args.resume:
         latest_file_name = '{:s}/latest.pth'.format(args.model_save_dir)
+        print('Resume model from ', latest_file_name)
         latest_dict = torch.load(latest_file_name)
         args.start_iteration = latest_dict['iteration'] + 1
         model.load_state_dict(torch.load(latest_dict['model_file_name']))
         optimizer.load_state_dict(torch.load(latest_dict['optimizer_file_name']))
         log_fid = open(args.model_save_dir + '/training.log', 'a')
-
+        args.iteration = latest_dict['iteration']-1
+        for _ in range(args.iteration):
+            scheduler.step()
     else:
         log_fid = open(args.model_save_dir + '/training.log', 'w')
 
@@ -237,14 +240,14 @@ def main():
     print('Approx Epochs to RUN: {}, Start Ietration {} Max iterations {} # of samples in dataset {}'.format(
         approx_epochs, iteration, args.max_iterations, len(train_loader)))
     epoch = -1
-    scheduler = MultiStepLR(optimizer, milestones=args.stepvalues, gamma=args.gamma)
+
     model.train()
     torch.cuda.synchronize()
     start = time.perf_counter()
     while iteration < args.max_iterations:
         epoch += 1
         for i, (batch, targets, __ , __) in enumerate(train_loader):
-            if i<len(train_loader)-2:
+            if i<len(train_loader):
                 if iteration > args.max_iterations:
                     break
                 iteration += 1

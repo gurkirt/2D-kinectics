@@ -156,10 +156,11 @@ class ANETclassification(object):
                    'classification task.')
             print ('\tMean Average Precision: {}'.format(ap.mean()))
             print ('\tError@{}: {}'.format(self.top_k, 1.0 - hit_at_k))
-            #print '\tAvg Hit@{}: {}'.format(self.top_k, avg_hit_at_k)
+            print ('\tAvg Hit@{}: {}'.format(self.top_k, avg_hit_at_k))
         self.ap = ap
         self.hit_at_k = hit_at_k
         self.avg_hit_at_k = avg_hit_at_k
+        return ap.mean(), hit_at_k, avg_hit_at_k
 
 ################################################################################
 # Metrics

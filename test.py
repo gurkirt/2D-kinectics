@@ -162,19 +162,21 @@ def main():
 
     args.num_classes = val_dataset.num_classes
 
+    log_fid = open(args.model_save_dir + '/test_log.txt', 'w')
+    log_fid.write(args.exp_name + '\n')
+    for arg in vars(args):
+        print(arg, getattr(args, arg))
+        log_fid.write(str(arg) + ': ' + str(getattr(args, arg)) + '\n')
+
+
     for test_iteration in [int(itr) for itr in args.test_iterations.split(',')]:
         save_filename = '{:s}/output_{:s}_{:06d}.pkl'.format(args.model_save_dir, subset, test_iteration)
         if not os.path.isfile(save_filename):
             print('Models will be cached in ', args.model_save_dir)
-            log_fid = open(args.model_save_dir + '/test_log.txt', 'w')
-            log_fid.write(args.exp_name + '\n')
-            for arg in vars(args):
-                print(arg, getattr(args, arg))
-                log_fid.write(str(arg) + ': ' + str(getattr(args, arg)) + '\n')
-
             model, criterion = initialise_model(args)
             model_file_name = '{:s}/model_{:06d}.pth'.format(args.model_save_dir, test_iteration)
             print('Loading model from ', model_file_name)
+            log_fid.write('Loading model from '+ model_file_name+'\n')
             model_dict = torch.load(model_file_name)
             # if args.ngpu>1:
             model.load_state_dict(model_dict)
@@ -214,13 +216,15 @@ def main():
                 end = time.perf_counter()
 
                 if i % args.print_freq == 0:
-                    print('Test:   [{0}/{1}]'
-                          'Time {batch_time.val:.3f} ({batch_time.avg:.3f})'
-                          'Loss {loss.val:.4f} ({loss.avg:.4f})'
-                          'Prec@1 {top1.val:.3f} ({top1.avg:.3f})'
+                    line = 'Test:   [{0}/{1}]' \
+                          'Time {batch_time.val:.3f} ({batch_time.avg:.3f})' \
+                          'Loss {loss.val:.4f} ({loss.avg:.4f})' \
+                          'Prec@1 {top1.val:.3f} ({top1.avg:.3f})' \
                           'Prec@3 {top3.val:.3f} ({top3.avg:.3f})'.format(
                            i, len(val_loader), batch_time=batch_time, loss=losses,
-                           top1=top1, top3=top3))
+                           top1=top1, top3=top3)
+                    print(line)
+                    log_fid.write(line+'\n')
                 res_data = output.data.cpu().numpy()
                 # print('video_num type', video_num.type())
                 # print('frame_num type', frame_nums.type())
@@ -238,7 +242,9 @@ def main():
                     allscores[videoname]['scores'][count, :] = scores
                     allscores[videoname]['fids'][count] = frame_num
                     allscores[videoname]['count'] += 1
-            print(' * Prec@1 {top1.avg:.3f} Prec@3 {top3.avg:.3f}'.format(top1=top1, top3=top3))
+            line = ' * Prec@1 {top1.avg:.3f} Prec@3 {top3.avg:.3f}'.format(top1=top1, top3=top3)
+            print(line)
+            log_fid.write(line + '\n')
             print('Done FRAME LEVEL evaluation Con')
 
             for videoname in allscores.keys():
