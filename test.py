@@ -279,7 +279,7 @@ def evaluate(allscores, annot_file, save_filename, subset):
     vdata['version'] = "KINETICS VERSION 1.0"
 
     K = 5
-    for classtopk in [10,20,30,50,60,80,100,120,150]:
+    for classtopk in [30,50]:
         outfilename = '{:s}-clstk-{:03d}.json'.format(save_filename[:-4], classtopk)
         print('outfile ', outfilename)
         print('Number of loaded', len(allscores.keys()))

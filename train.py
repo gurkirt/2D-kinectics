@@ -46,7 +46,7 @@ parser.add_argument('--gap', default=1, type=int, metavar='N',
                     help='gap between the input frame within a sequence')
 parser.add_argument('--frame_step', default=6, type=int, metavar='N',
                     help='sample every frame_step for for training')
-parser.add_argument('--max_iterations', default=400000, type=int, metavar='N',
+parser.add_argument('--max_iterations', default=500000, type=int, metavar='N',
                     help='number of total iterations to run')
 parser.add_argument('--start-iteration', default=0, type=int, metavar='N',
                     help='manual iterations number (useful on restarts)')
@@ -62,7 +62,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
-parser.add_argument('--stepvalues', default='200000,300000', type=str,
+parser.add_argument('--stepvalues', default='200000,350000', type=str,
                     help='Chnage the lr @')
 parser.add_argument('--gamma', default=0.1, type=float,
                     help='Gamma update for SGD')

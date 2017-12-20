@@ -88,11 +88,11 @@ model_save_dir = root + 'cache/' + exp_name
 
 log_fid = open(model_save_dir+'/eval.log','w')
 
-for itr in reversed([200000, 300000, 400000, 500000]):
+for itr in [500000,]:
     args.exp_name = exp_name
     save_filename = '{:s}/output_{:s}_{:06d}.pkl'.format(model_save_dir, 'val', itr)
 
-    for classtopk in reversed([10, 20, 30, 50, 60, 80]):
+    for classtopk in [30,50]:
         outfilename = '{:s}-clstk-{:03d}.json'.format(save_filename[:-4], classtopk)
         print(outfilename)
         log_fid.write(outfilename+'\n')

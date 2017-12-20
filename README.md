@@ -1,7 +1,10 @@
-# Kinectics training on 1 GPU
+# A Two Stream Baseline on Kinectics dataset
+## Kinectics Training on 1 GPU in 2 Days
 This is [PyTorch](http://pytorch.org/) implementation of two stream network of action classification on [Kinetics](https://deepmind.com/research/open-source/open-source-datasets/kinetics/) dataset.
-We train two streams of networks independently on individual frames of RGB (appearence) and optical flow (flow) as inputs.
+We train two streams of networks independently on individual(or stacked) frames of RGB (appearence) and optical flow (flow) as inputs.
 
+Objective of this repository to establish a two stream baseline and ease the training process on
+such a huge dataset.
 
 ### Table of Contents
 - <a href='#installation'>Installation</a>
@@ -36,7 +39,8 @@ Notes:
   * Some video might be missing but you should be alright, if are able to download around 290K videos.
 
 ##### Preprocess
-First we need to extract images out of videos using `ffmpeg` and resave the annotations.
+First we need to extract images out of videos using `ffmpeg` and resave the annotations,
+so that annotations are compatible with this code.
 <br>
 You can take help of scripts in `prep` folder in the repo to do both the things.
 <br>
@@ -55,21 +59,21 @@ Let's assume that you extracted dataset in `/home/user/kinetics/` directory then
 
 ```Shell
 CUDA_VISIBLE_DEVICES=0 python train.py --root=/home/user/kinetics/ --global_models_dir=/home/user/pretrained-models/
---visdom=True --input_type=rgb
+--visdom=True --input_type=rgb --stepvalues=200000,350000 --max_iterations=500000
 ```
 
 To train of flow inputs
 ```Shell
 CUDA_VISIBLE_DEVICES=1 python train.py --root=/home/user/kinetics/ global_models_dir=/home/user/pretrained-models/
---visdom=True --input_type=farneback --stepvalues=300000,425000
+--visdom=True --input_type=farneback --stepvalues=250000,400000 --max_iterations=500000
 ```
 
 Different paramneter in `train.py` will result in different performance
 
 - Note:
   * InceptionV3 occupies almost 8.5GB VRAM on a GPU, 
-   raining can take from 3-7 days  depending upon the disk, cpu and gpu speed. 
-   I used 1080Ti gpu, SSD hard-drive and an i7 cpu.  
+   raining can take from 2-4 days  depending upon the disk, cpu and gpu speed.
+   I used one 1080Ti gpu, SSD-PCIe hard-drive and an i7 cpu. Disk operation could be a bottleneck if you are using HDD.
   * For instructions on Visdom usage/installation, see the <a href='#installation'>Installation</a> section. 
     By default it is off.
   * If you don't like to use visdom then you always keep track of train using logfile which is saved under save_root directory
@@ -94,57 +98,66 @@ CUDA_VISIBLE_DEVICES=0 python3 test.py --root=/home/user/kinetics/ --input=rgb -
   * There is a log file file created for frame-level evaluation.
 
 ##### Video-level evaluation
-You will need frame-level scores
+Video-level labling requires frame-level scores.
+`test.py` not only store frame-level score but also video-level scores in `evaluate`
+function within. It will dump the video level output in json format
+(same a used in activtiyNet challenge) for validation set.
+Now you can specify the parameter in `eval.py` and evaluate
 
 ## Performance
 
 <table style="width:100% th">
   <tr>
     <td> method </td>
-    <td>f-top1</td> 
-    <td>f-top3</td>
-    <td>v-top1</td>
-    <td>v-top5</td>
-    <td>mean-error</td>
+    <td>Num Frames</td>
+    <td>frame-top1</td>
+    <td>frame-top3</td>
+    <td>video-top1</td>
+    <td>video-top5</td>
+    <td>mean</td>
+    <td>video-mAP</td>
   </tr>
   <tr>
-    <td align="left">RGB</td> 
-    <td> soon </td>
-    <td> soon </td>
-    <td> soon </td> 
-    <td> soon </td>
-    <td> soon </td>
+    <td align="left">RGB</td>
+    <td align="center">54.5</td>
+    <td align="center">70.7</td>
+    <td align="center">66.9</td>
+    <td align="center">85.7</td>
+    <td align="center">76.3</td>
+    <td align="center">70.1</td>
   </tr>
   <tr>
     <td align="left">Flow</td> 
-    <td> soon </td>
-    <td> soon </td>
-    <td> soon </td> 
-    <td> soon </td>
-    <td> soon </td>
+    <td align="center">25.7</td>
+    <td align="center">39.7</td>
+    <td align="center">45.1</td>
+    <td align="center">69.7</td>
+    <td align="center">57.4</td>
+    <td align="center">46.6</td>
   </tr>
   <tr>
     <td align="left">RGB+FLOW</td> 
-    <td> soon </td>
-    <td> soon </td>
-    <td> soon </td> 
-    <td> soon </td>
-    <td> soon </td>
+    <td align="center"> soon </td>
+    <td align="center"> soon </td>
+    <td align="center"> soon </td>
+    <td align="center"> soon </td>
+    <td align="center"> soon </td>
+    <td align="center"> soon </td>
   </tr>
 </table>
 
 ## Extras (comming soon)
-To use pre-trained model download the pretrained weights from the links given below and make changes in `test.py` to accept the downloaded weights. 
+Pre-trained models can be downloaded from the links given below.
+You will need to make changes in `test.py` to accept the downloaded weights.
 
 ##### Download pre-trained networks
 - Currently, we provide the following PyTorch models: 
-    * InceptionV3 trained on kinectics ; available from my [google drive]()
-      - appearence model trained on rgb-images (named `r`)
-      - accurate flow model trained on farneback-images (named `f`)    
+    * InceptionV3 trained on kinectics ; available from my [google drive](https://drive.google.com/drive/folders/1ZzEMPepcGLEJ6dKIDqzsSpgCZX0pnZyw?usp=sharing)
+      - appearence model trained on rgb-images (named `rgb_OneFrame_model_500000`)
+      - accurate flow model trained on farneback-images (named `farneback_OneFrame_model_500000`)
 
 ## TODO
- - Upload pretrained models
- - fill the table
+ - fill the table with fused results
 
 ## References
 - [1] Kay, Will, et al. "The Kinetics Human Action Video Dataset." arXiv preprint arXiv:1705.06950 (2017).
