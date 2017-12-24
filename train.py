@@ -56,7 +56,7 @@ parser.add_argument('-b', '--batch-size', default=64, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
 parser.add_argument('--ngpu', default=1, type=int, metavar='N',
                     help='use multiple GPUs take ngpu the avaiable GPUs')
-parser.add_argument('--lr', '--learning-rate', default=0.0005, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -85,7 +85,7 @@ parser.add_argument('--root', default='/mnt/mars-delta/',
 
 def main():
     val_step = 25000
-    val_steps = [5000, ]
+    val_steps = [5000,]
     train_step = 500
 
     args = parser.parse_args()
