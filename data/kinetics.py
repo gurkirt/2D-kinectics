@@ -182,8 +182,8 @@ class KINETICS(data.Dataset):
         self.annot_file = self.root + "hfiles/finalannots.json"
         print('Annot File: ', self.annot_file, ' Mode is set to ', self.mode)
 
-        #self.img_path = os.path.join('/mnt/mars-fast/datasets/kinetics/', input_type+'-images', '%s.jpg')
-        self.img_path = os.path.join(root, input_type + '-images', '%s.jpg')
+        self.img_path = os.path.join('/mnt/mars-fast/datasets/kinetics/', input_type+'-images', '%s.jpg')
+        #self.img_path = os.path.join(root, input_type + '-images', '%s.jpg')
 
         image_list, video_list, classes, video_labels = make_lists(self.annot_file, subsets, frame_step, seq_len=self.seq_len,gap=self.gap)
 
@@ -232,12 +232,6 @@ class KINETICS(data.Dataset):
             input_imgs = imgs[0]
         else:
             input_imgs = torch.cat(imgs, 0)
-
-        #print('Done Stacking', input_imgs.size())
-        # else:
-        #     path = self.img_path % '{:s}/{:05d}'.format(videoname, frame_num)
-        #     input = self.transform(self.loader(path))
-        # print('single image dim', input.size())
 
         return input_imgs, target, vid_num, frame_num
 
