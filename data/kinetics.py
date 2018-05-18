@@ -122,6 +122,7 @@ def make_lists(annot_file, subsets, frame_step, seq_len=1, gap=1):
     vcount = -1
     image_list = []
     totalcount = 0
+    # pdb.set_trace()
     for vid,videoname in enumerate(sorted(database.keys())):
         video_info = database[videoname]
         isthere = video_info['isthere']
@@ -132,7 +133,7 @@ def make_lists(annot_file, subsets, frame_step, seq_len=1, gap=1):
             numf = video_info['numf']
             if numf > seq_len * 2:
                 if 'test' not in subsets:
-                    label = video_info['cls']-1
+                    label = video_info['cls']
                 maxf = numf-(seq_len//2)*gap-1
                 indexs = np.arange((seq_len//2)*gap, maxf, frame_step)
                 if indexs.shape[0] > 0:
@@ -154,7 +155,7 @@ class KINETICS(data.Dataset):
     """
 
     def __init__(self, root, input_type, transform=None, target_transform=None,
-                 dataset_name='actnet', subsets=['train'], exp_name='',
+                 dataset_name='actnet', datasubset='200', subsets=['train',], exp_name='',
                  netname='inceptionv3', scale_size=321, input_size=299,
                  frame_step=6, seq_len=1, gap=1):
 
@@ -172,24 +173,31 @@ class KINETICS(data.Dataset):
         self.transform = transform
         self.target_transform = target_transform
         self.name = dataset_name
-
+        # pdb.set_trace()
         self.loader = pil_loader
         self.random_crop = pil_random_crop
+        # pdb.set_trace()
         if netname.find('vgg')>-1:
             self.loader = cv_loader
             self.random_crop = cv_random_crop
 
-        self.annot_file = self.root + "hfiles/finalannots.json"
+        self.annot_file = self.root + "hfiles/Annots.json"
+
+        assert len(datasubset) > 1
+
+        self.datasubset = datasubset
+        self.annot_file = self.root + "hfiles/Annots_{}.json".format(datasubset)
+
         print('Annot File: ', self.annot_file, ' Mode is set to ', self.mode)
 
-        self.img_path = os.path.join('/mnt/mars-fast/datasets/kinetics/', input_type+'-images', '%s.jpg')
-        #self.img_path = os.path.join(root, input_type + '-images', '%s.jpg')
+        # self.img_path = os.path.join('/mnt/mars-fast/datasets/kinetics/', input_type+'-images', '%s.jpg')
+        self.img_path = os.path.join(root, input_type + '-images', '%s.jpg')
 
         image_list, video_list, classes, video_labels = make_lists(self.annot_file, subsets, frame_step, seq_len=self.seq_len,gap=self.gap)
 
         #self.video_labels = video_labels
-        self.classes = classes
-        self.num_classes = len(classes.keys())
+        self.classes = classes.keys()
+        self.num_classes = len(self.classes)
         self.video_list = video_list
         self.image_list = image_list
         print('Inistliased Kinetics date for ', subsets,' set with ', len(image_list),' images')

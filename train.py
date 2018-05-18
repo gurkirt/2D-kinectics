@@ -32,9 +32,10 @@ torch.cuda.manual_seed_all(123)
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('--dataset', metavar='NAME', default='kinetics',
                     help='path to dataset')
+parser.add_argument('--datasubset', metavar='NAME', default='200',
+                    help='path to dataset')
 parser.add_argument('--arch', '-a', metavar='ARCH', default='inceptionV3',
                     help='model architectures ')
-
 ## parameters for dataloader
 parser.add_argument('--input', '-i', metavar='INPUT', default='rgb',
                     help='input image type')
@@ -46,11 +47,10 @@ parser.add_argument('--gap', default=1, type=int, metavar='N',
                     help='gap between the input frame within a sequence')
 parser.add_argument('--frame_step', default=6, type=int, metavar='N',
                     help='sample every frame_step for for training')
-parser.add_argument('--max_iterations', default=300000, type=int, metavar='N',
+parser.add_argument('--max_iterations', default=150000, type=int, metavar='N',
                     help='number of total iterations to run')
 parser.add_argument('--start-iteration', default=0, type=int, metavar='N',
                     help='manual iterations number (useful on restarts)')
-
 ## parameter for optimizer
 parser.add_argument('-b', '--batch-size', default=64, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
@@ -62,11 +62,10 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
-parser.add_argument('--stepvalues', default='120000,200000', type=str,
-                    help='Chnage the lr @')
+parser.add_argument('--step_values', default='70000,130000', type=str,
+                    help='Change the lr @')
 parser.add_argument('--gamma', default=0.1, type=float,
                     help='Gamma update for SGD')
-
 ## logging parameters
 parser.add_argument('--print-freq', '-p', default=20, type=int,
                     metavar='N', help='print frequency (default: 10)')
@@ -78,10 +77,14 @@ parser.add_argument('--global_models_dir', default='~/global-models/pytorch-imag
                     type = str, metavar='PATH', help='place where pre-trained models are ')
 parser.add_argument('--pretrained', default=True, type=bool,
                     help='use pre-trained model default (True)')
-
 ## directory
 parser.add_argument('--root', default='/mnt/mars-delta/',
                     type = str, metavar='PATH', help='place where datasets are present')
+
+def set_bn_eval(m):
+    classname = m.__class__.__name__
+    if classname.find('BatchNorm') != -1:
+        m.eval()
 
 def main():
     val_step = 25000
@@ -91,9 +94,9 @@ def main():
     args = parser.parse_args()
     hostname = socket.gethostname()
 
-    args.stepvalues = [int(val) for val in args.stepvalues.split(',')]
+    args.stepvalues = [int(val) for val in args.step_values.split(',')]
 
-    exp_name = '{}-{}-{}-sl{:02d}-g{:d}-fs{:d}-{}-{:06d}'.format(args.dataset,
+    exp_name = '{}-{}-{}-{}-sl{:02d}-g{:d}-fs{:d}-{}-{:06d}'.format(args.dataset,args.datasubset,
                 args.arch, args.input, args.seq_len, args.gap, args.frame_step, args.batch_size, int(args.lr * 1000000))
 
     args.exp_name = exp_name
@@ -141,7 +144,7 @@ def main():
                                      std=stds)
 
     # Data loading transform based on model type
-    transform = transforms.Compose([transforms.ToTensor(),normalize])
+    transform = transforms.Compose([transforms.ToTensor(), normalize])
     val_transform = transforms.Compose([transforms.Scale(int(input_size * 1.1)),
                                         transforms.CenterCrop(int(input_size)),
                                         transforms.ToTensor(),
@@ -152,12 +155,15 @@ def main():
         transform = BaseTransform(size=input_size,mean=means)
         val_transform = transform
         print('\n\ntransforms are going to be VGG type\n\n')
-
+    subsets = ['train']
+    # pdb.set_trace()
     train_dataset = KINETICS(args.root,
                              args.input,
                              transform,
+                             dataset_name=args.dataset,
                              netname=args.arch,
-                             subsets=['train'],
+                             datasubset=args.datasubset,
+                             subsets=subsets,
                              scale_size=int(input_size*1.1),
                              input_size=int(input_size),
                              exp_name=exp_name,
@@ -167,7 +173,7 @@ def main():
                              )
 
     args.num_classes = train_dataset.num_classes
-    print('Models will be cached in ', args.model_save_dir)
+    print('Models will be cached in ', args.model_save_dir, 'has ', args.num_classes, ' classes')
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=args.batch_size, shuffle=True,
@@ -177,8 +183,10 @@ def main():
     val_dataset = KINETICS(args.root,
                            args.input,
                            val_transform,
+                           dataset_name=args.dataset,
                            netname=args.arch,
-                           subsets=['val'],
+                           datasubset=args.datasubset,
+                           subsets=subsets,
                            exp_name=exp_name,
                            scale_size=int(input_size * 1.1),
                            input_size=int(input_size),
@@ -224,6 +232,7 @@ def main():
     for arg in vars(args):
         print(arg, getattr(args, arg))
         log_fid.write(str(arg) + ': ' + str(getattr(args, arg)) + '\n')
+
     log_fid.write(str(model))
     best_top1 = 0.0
     val_loss = 0.0
@@ -242,6 +251,7 @@ def main():
     epoch = -1
 
     model.train()
+    model.apply(set_bn_eval)
     torch.cuda.synchronize()
     start = time.perf_counter()
     while iteration < args.max_iterations:
@@ -286,6 +296,7 @@ def main():
                                 loss=losses, top1=top1, top3=top3)
                     print(line)
                     log_fid.write(line+'\n')
+
 
                 avgtop1 = top1.avg
                 avgtop3 = top3.avg
@@ -332,6 +343,7 @@ def main():
                         )
 
                     model.train()
+                    model.apply(set_bn_eval)
 
                 if iteration % train_step == 0 and iteration > 0:
                     if args.visdom:

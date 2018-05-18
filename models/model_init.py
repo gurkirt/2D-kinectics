@@ -8,6 +8,7 @@ def initialise_model(args):
     if args.arch.find('inceptionV3') > -1:
         if args.pretrained:
             print("=> using pre-trained model '{}'".format(args.arch))
+            print("NUmber of classes will be ", args.num_classes)
             model = inception_v3(num_classes=args.num_classes, pretrained=True, global_models_dir=args.global_models_dir, seq_len=args.seq_len)
         else:
             print("=> creating model '{}'".format(args.arch))
@@ -20,7 +21,7 @@ def initialise_model(args):
             print("=> creating model '{}'".format(args.arch))
             model = vggnet(num_classes=args.num_classes, seq_len=args.seq_len)
     else:
-        raise 'Spcify the correct model type'
+        raise Exception('Spcify the correct model type')
 
     if args.ngpu>1:
         if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):

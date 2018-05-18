@@ -23,12 +23,9 @@ def inception_v3(pretrained=False, num_classes = 400, global_models_dir = '', se
         model = Inception3(num_channels, num_classes=num_classes)
         model_path = global_models_dir + '/inception_v3.pth'
         print('=> From: ', model_path)
-        print('MODEL TYPE is STD')
+        print('MODEL TYPE is STD', num_classes)
         model_dict = torch.load(model_path)
-        if num_channels == 3:
-            model.load_state_dict(model_dict)
-        else:
-            model.load_my_state_dict(model_dict, seq_len)
+        model.load_my_state_dict(model_dict, seq_len)
 
         return model
 
