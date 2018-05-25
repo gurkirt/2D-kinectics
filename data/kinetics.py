@@ -155,7 +155,7 @@ class KINETICS(data.Dataset):
     """
 
     def __init__(self, root, input_type, transform=None, target_transform=None,
-                 dataset_name='actnet', datasubset='200', subsets=['train',], exp_name='',
+                 dataset_name='kinectics', datasubset='200', subsets=['train',], exp_name='',
                  netname='inceptionv3', scale_size=321, input_size=299,
                  frame_step=6, seq_len=1, gap=1):
 

@@ -63,7 +63,7 @@ def extractframes(vids,fps):
             if not os.path.isdir(imgdir):
                  os.mkdir(imgdir)
             #
-            imglist = os.listdir(imgdir);
+            imglist = os.listdir(imgdir)
             imglist = [i for i in imglist if i.endswith('.jpg')]
             vidfile = convanem(vidfile)
             if len(imglist)<10:

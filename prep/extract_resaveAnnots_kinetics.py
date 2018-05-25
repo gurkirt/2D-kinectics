@@ -12,7 +12,6 @@ import json
 import string
 import pandas as pd
 
-
 baseDir_src = "/mnt/sun-gamma/backup-videos/kinetics/"
 baseDir_dst = "/mnt/mars-delta/kinetics/"
 
@@ -23,7 +22,6 @@ def parse_kinetics_annotations(input_csv):
     input_csv: str
         Path to CSV file containing the following columns:
           'YouTube Identifier,Start time,End time,Class label'
-
     returns:
     -------
     dataset: DataFrame

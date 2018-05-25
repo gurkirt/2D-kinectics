@@ -186,7 +186,7 @@ def main():
                            dataset_name=args.dataset,
                            netname=args.arch,
                            datasubset=args.datasubset,
-                           subsets=subsets,
+                           subsets=['val',],
                            exp_name=exp_name,
                            scale_size=int(input_size * 1.1),
                            input_size=int(input_size),
