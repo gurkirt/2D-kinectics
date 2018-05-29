@@ -30,29 +30,24 @@ torch.manual_seed(123)
 torch.cuda.manual_seed_all(123)
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
-parser.add_argument('--dataset', metavar='NAME', default='kinetics',
-                    help='path to dataset')
-parser.add_argument('--datasubset', metavar='NAME', default='200',
-                    help='path to dataset')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='inceptionV3',
-                    help='model architectures ')
+parser.add_argument('--dataset', metavar='NAME', default='kinetics',  help='path to dataset')
+parser.add_argument('--datasubset', metavar='NAME', default='600', help='path to dataset')
+parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet50', help='model architectures ')
 ## parameters for dataloader
-parser.add_argument('--input', '-i', metavar='INPUT', default='rgb',
-                    help='input image type')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
+parser.add_argument('--input', '-i', metavar='INPUT', default='rgb', help='input image type')
+parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers (default: 4)')
 parser.add_argument('--seq_len', default=1, type=int, metavar='N',
                     help='seqence length')
 parser.add_argument('--gap', default=1, type=int, metavar='N',
                     help='gap between the input frame within a sequence')
 parser.add_argument('--frame_step', default=6, type=int, metavar='N',
                     help='sample every frame_step for for training')
-parser.add_argument('--max_iterations', default=150000, type=int, metavar='N',
+parser.add_argument('--max_iterations', default=400000, type=int, metavar='N',
                     help='number of total iterations to run')
 parser.add_argument('--start-iteration', default=0, type=int, metavar='N',
                     help='manual iterations number (useful on restarts)')
 ## parameter for optimizer
-parser.add_argument('-b', '--batch-size', default=64, type=int,
+parser.add_argument('-b', '--batch-size', default=100, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
 parser.add_argument('--ngpu', default=1, type=int, metavar='N',
                     help='use multiple GPUs take ngpu the avaiable GPUs')
@@ -62,7 +57,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
-parser.add_argument('--step_values', default='70000,130000', type=str,
+parser.add_argument('--step_values', default='200000,300000', type=str,
                     help='Change the lr @')
 parser.add_argument('--gamma', default=0.1, type=float,
                     help='Gamma update for SGD')
@@ -88,7 +83,7 @@ def set_bn_eval(m):
 
 def main():
     val_step = 25000
-    val_steps = [5000,]
+    val_steps = [25000,]
     train_step = 500
 
     args = parser.parse_args()
@@ -190,7 +185,7 @@ def main():
                            exp_name=exp_name,
                            scale_size=int(input_size * 1.1),
                            input_size=int(input_size),
-                           frame_step=args.frame_step*6,
+                           frame_step=args.frame_step*4,
                            seq_len=args.seq_len,
                            gap=args.gap
                            )
@@ -249,6 +244,9 @@ def main():
     print('Approx Epochs to RUN: {}, Start Ietration {} Max iterations {} # of samples in dataset {}'.format(
         approx_epochs, iteration, args.max_iterations, len(train_loader)))
     epoch = -1
+    # if args.ngpu > 1:
+    #     print('\n\nLets do dataparallel\n\n')
+    #     model = torch.nn.DataParallel(model)
 
     model.train()
     model.apply(set_bn_eval)

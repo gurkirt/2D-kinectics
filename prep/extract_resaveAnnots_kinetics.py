@@ -46,8 +46,8 @@ def getlabels(kin_subset):
     with open(baseDir_dst+'hfiles/classes_{}.txt'.format(kin_subset), 'w') as f:
         for label in train_df['label-name']:
             if label not in actions.keys() and label != 'test':
-                count += 1
                 actions[label] = count
+                count += 1
                 f.write(label+'\n')
     print(count)
     return actions
@@ -211,5 +211,5 @@ def save_200_annots():
         json.dump(annot, f)
 
 if __name__ == '__main__':
-    # main()
-    save_200_annots()
+    main()
+    # save_200_annots()

@@ -1,6 +1,7 @@
 
 from .inceptionv3 import inception_v3
 from .vgg import vggnet
+from .resnet import resnet
 import torch
 
 def initialise_model(args):
@@ -20,6 +21,14 @@ def initialise_model(args):
         else:
             print("=> creating model '{}'".format(args.arch))
             model = vggnet(num_classes=args.num_classes, seq_len=args.seq_len)
+    elif args.arch[:6] == 'resnet':
+        modelperms = {'resnet18': [2, 2, 2, 2], 'resent34': [3, 4, 6, 3], 'resnet50': [3, 4, 6, 3],
+                      'resnet101': [3, 4, 23, 3], 'resent152': [3, 8, 36, 3]}
+        model = resnet(modelperms[args.arch], args.arch, args.seq_len, args.num_classes)
+        if args.pretrained:
+            load_dict = torch.load(args.global_models_dir + '/' + args.arch+'.pth')
+            # print(load_dict.keys(), '\n\n', model.state_dict().keys())
+            model.load_my_state_dict(load_dict, args.seq_len)
     else:
         raise Exception('Spcify the correct model type')
 

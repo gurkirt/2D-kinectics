@@ -98,8 +98,12 @@ def get_mean_size(arch):
         input_size = 299.0
         means = [0.5, 0.5, 0.5]
         stds= [0.5, 0.5, 0.5]
-    else:
+    elif arch.find('vgg') > -1:
         input_size = 300
         means = (104, 117, 123)
         stds = [0.0, 0.0, 0.0]
+    else:
+        input_size = 224.0
+        means = [0.485, 0.456, 0.406]
+        stds = [0.229, 0.224, 0.225]
     return input_size, means, stds
