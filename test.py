@@ -27,13 +27,14 @@ parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 parser.add_argument('--dataset', metavar='NAME', default='kinetics',
                     help='path to dataset')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='inceptionV3',
+parser.add_argument('--datasubset', metavar='NAME', default='200', help='path to dataset')
+parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet101',
                     help='model architectures ')
 
 ## parameters for dataloader
 parser.add_argument('--input', '-i', metavar='INPUT', default='rgb',
                     help='input image type')
-parser.add_argument('-j', '--workers', default=2, type=int, metavar='N',
+parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--seq_len', default=1, type=int, metavar='N',
                     help='seqence length')
@@ -41,7 +42,7 @@ parser.add_argument('--gap', default=1, type=int, metavar='N',
                     help='gap between the input frame within a sequence')
 parser.add_argument('--frame_step', default=6, type=int, metavar='N',
                     help='sample every frame_step for for training')
-parser.add_argument('--test-iterations', default='500000,400000,300000,200000', type=str, metavar='N',
+parser.add_argument('--test-iterations', default='30000,60000', type=str, metavar='N',
                     help='manual iterations number (useful on restarts)')
 
 ## parameter for optimizer
@@ -49,14 +50,14 @@ parser.add_argument('-b', '--batch-size', default=64, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
 parser.add_argument('-tb', '--test-batch-size', default=128, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
-parser.add_argument('--ngpu', default=2, type=int, metavar='N',
+parser.add_argument('--ngpu', default=1, type=int, metavar='N',
                     help='use multiple GPUs take ngpu the avaiable GPUs')
 parser.add_argument('--lr', '--learning-rate', default=0.0005, type=float,
                     metavar='LR', help='initial learning rate')
 
 parser.add_argument('--print-freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
-parser.add_argument('--global-models-dir', default='~/global-models/pytorch-imagenet',
+parser.add_argument('--global_models_dir', default='/mnt/mars-beta/global-models/pytorch-imagenet',
                     type = str, metavar='PATH', help='place where pre-trained models are ')
 
 parser.add_argument('--pretrained', default=False, type=bool,
@@ -76,19 +77,19 @@ def getscore(ground_truth_filename, prediction_filename, subset='val', verbose=T
                                              prediction_filename,
                                              subset=subset, verbose=verbose,
                                              check_status=True, top_k=1)
-    anet_classification.evaluate()
+    map1, hit_at_1, avg_hit_at_1 = anet_classification.evaluate()
 
     anet_classification = ANETclassification(ground_truth_filename,
                                              prediction_filename,
                                              subset=subset, verbose=verbose,
                                              check_status=True, top_k=5)
-    anet_classification.evaluate()
+    map5, hit_at_5, avg_hit_at_5 = anet_classification.evaluate()
+    return map1, hit_at_1, avg_hit_at_1, map5, hit_at_5, avg_hit_at_5
 
-
-def gettopklabel(preds, k, classtopk):
-    scores = np.zeros(400)
+def gettopklabel(preds, k, classtopk, numcl):
+    scores = np.zeros(numcl)
     topk = min(classtopk, np.shape(preds)[1])
-    for i in range(400):
+    for i in range(numcl):
         values = preds[i, :]
         values = np.sort(values)
         values = values[::-1]
@@ -105,25 +106,35 @@ def getid2a(classes):
         actid2action[str(classes[a])] = a
     return actid2action
 
+args = parser.parse_args()
+
+import socket
+hostname = socket.gethostname()
+
+if hostname == 'mars':
+    args.root = '/mnt/mars-fast/datasets/'
+    args.save_root = '/mnt/mars-delta/'
+    args.vis_port = 8097
+elif hostname == 'sun':
+    args.root = '/mnt/sun-gamma/'
+    args.save_root = '/mnt/sun-gamma/'
+    args.vis_port = 8096
+elif hostname == 'mercury':
+    args.root = '/mnt/mercury-fast/datasets/'
+    args.save_root = '/mnt/mercury-beta/'
+    args.vis_port = 8098
 
 def main():
 
-    args = parser.parse_args()
-    hostname = socket.gethostname()
-    if hostname in ['mars', 'sun']:
-        root = '/mnt/mars-delta/'
-    else:
-        raise 'PLEASE SPECIFY root FOR ' + hostname
-
-    exp_name = '{}-{}-{}-sl{:02d}-g{:d}-fs{:d}-{}-{:06d}'.format(args.dataset,
-                                                                 args.arch, args.input, args.seq_len, args.gap,
-                                                                 args.frame_step, args.batch_size,
-                                                                 int(args.lr * 1000000))
+    exp_name = '{}-{}-{}-{}-sl{:02d}-g{:d}-fs{:d}-{}-{:06d}'.format(args.dataset, args.datasubset,
+                                                                    args.arch, args.input, args.seq_len, args.gap,
+                                                                    args.frame_step, args.batch_size,
+                                                                    int(args.lr * 1000000))
 
     args.exp_name = exp_name
-    root += args.dataset + '/'
-    args.root = root
-    model_save_dir = root + 'cache/' + exp_name
+    args.root += args.dataset + '/'
+    # args.root = root
+    model_save_dir = args.save_root + args.dataset + '/cache/' + exp_name
 
     args.model_save_dir = model_save_dir
     args.global_models_dir = os.path.expanduser(args.global_models_dir)
@@ -155,7 +166,8 @@ def main():
                            )
 
     val_loader = torch.utils.data.DataLoader(val_dataset,
-                                             batch_size=args.batch_size, shuffle=False,
+                                             batch_size=args.batch_size,
+                                             shuffle=False,
                                              num_workers=args.workers, pin_memory=True
                                              )
 
@@ -262,10 +274,10 @@ def main():
             with open(save_filename, 'rb') as f:
                 allscores = pickle.load(f)
 
-        evaluate(allscores, val_dataset.annot_file, save_filename, subset)
+        evaluate(allscores, val_dataset.annot_file, save_filename, subset, args.num_classes, log_fid)
 
 
-def evaluate(allscores, annot_file, save_filename, subset):
+def evaluate(allscores, annot_file, save_filename, subset, num_classes, log_fid):
     print(' ')
     with open(annot_file, 'r') as f:
         annotdata = json.load(f)
@@ -279,7 +291,7 @@ def evaluate(allscores, annot_file, save_filename, subset):
     vdata['version'] = "KINETICS VERSION 1.0"
 
     K = 5
-    for classtopk in [30,50]:
+    for classtopk in [10,30,50]:
         outfilename = '{:s}-clstk-{:03d}.json'.format(save_filename[:-4], classtopk)
         print('outfile ', outfilename)
         print('Number of loaded', len(allscores.keys()))
@@ -290,11 +302,11 @@ def evaluate(allscores, annot_file, save_filename, subset):
                 vidresults = []
                 if vid in allscores.keys():
                     preds = allscores[vid]['scores']
-                    labels, scores = gettopklabel(np.transpose(preds), K, classtopk)
+                    labels, scores = gettopklabel(np.transpose(preds), K, classtopk, num_classes)
                     for idx in range(K):
                         score = scores[idx]
                         label = labels[idx]
-                        name = actid2action[str(label+1)]
+                        name = actid2action[str(label)]
                         tempdict = {'label': name, 'score': score}
                         vidresults.append(tempdict)
                 else:
@@ -306,8 +318,14 @@ def evaluate(allscores, annot_file, save_filename, subset):
         with open(outfilename, 'w') as f:
             json.dump(vdata, f)
         print(annot_file,outfilename)
-        # getscore(annot_file, outfilename)
-
+        log_fid.write(outfilename+'\n')
+        map1, hit_at_1, avg_hit_at_1, map5, hit_at_5, avg_hit_at_5 = getscore(annot_file, outfilename)
+        log_fid.write('top{} map = {:f} hit = {:f} avg hit = {:f}\n'.format(1, map1, hit_at_1, avg_hit_at_1))
+        log_fid.write('top{} map = {:f} hit = {:f} avg hit = {:f}\n'.format(5, map5, hit_at_5, avg_hit_at_5))
+        log_fid.write('AVG hit = {:f} avg hit = {:f}\n'.format((hit_at_1 +hit_at_5)/2, (avg_hit_at_1+avg_hit_at_5)/2))
+        print('top{} map = {:f} hit = {:f} avg hit = {:f}'.format(1, map1, hit_at_1, avg_hit_at_1))
+        print('top{} map = {:f} hit = {:f} avg hit = {:f}'.format(5, map5, hit_at_5, avg_hit_at_5))
+        print('AVG hit = {:f} avg hit = {:f}'.format((hit_at_1 + hit_at_5) / 2, (avg_hit_at_1 + avg_hit_at_5) / 2))
 
 if __name__ == '__main__':
     main()

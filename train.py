@@ -31,8 +31,8 @@ torch.cuda.manual_seed_all(123)
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('--dataset', metavar='NAME', default='kinetics',  help='path to dataset')
-parser.add_argument('--datasubset', metavar='NAME', default='600', help='path to dataset')
-parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet50', help='model architectures ')
+parser.add_argument('--datasubset', metavar='NAME', default='200', help='path to dataset')
+parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet101', help='model architectures ')
 ## parameters for dataloader
 parser.add_argument('--input', '-i', metavar='INPUT', default='rgb', help='input image type')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers (default: 4)')
@@ -42,22 +42,22 @@ parser.add_argument('--gap', default=1, type=int, metavar='N',
                     help='gap between the input frame within a sequence')
 parser.add_argument('--frame_step', default=6, type=int, metavar='N',
                     help='sample every frame_step for for training')
-parser.add_argument('--max_iterations', default=400000, type=int, metavar='N',
+parser.add_argument('--max_iterations', default=250000, type=int, metavar='N',
                     help='number of total iterations to run')
 parser.add_argument('--start-iteration', default=0, type=int, metavar='N',
                     help='manual iterations number (useful on restarts)')
 ## parameter for optimizer
-parser.add_argument('-b', '--batch-size', default=100, type=int,
+parser.add_argument('-b', '--batch-size', default=64, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
 parser.add_argument('--ngpu', default=1, type=int, metavar='N',
                     help='use multiple GPUs take ngpu the avaiable GPUs')
-parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.0005, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)')
-parser.add_argument('--step_values', default='200000,300000', type=str,
+parser.add_argument('--step_values', default='100000,180000', type=str,
                     help='Change the lr @')
 parser.add_argument('--gamma', default=0.1, type=float,
                     help='Gamma update for SGD')
@@ -68,13 +68,33 @@ parser.add_argument('--resume', default=False, type=bool, metavar='B',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--visdom', default=False, type=bool, metavar='B',
                     help='weather to use visdom (default: True)')
-parser.add_argument('--global_models_dir', default='~/global-models/pytorch-imagenet',
+parser.add_argument('--global_models_dir', default='/mnt/mars-beta/global-models/pytorch-imagenet',
                     type = str, metavar='PATH', help='place where pre-trained models are ')
 parser.add_argument('--pretrained', default=True, type=bool,
                     help='use pre-trained model default (True)')
 ## directory
-parser.add_argument('--root', default='/mnt/mars-delta/',
+parser.add_argument('--root', default='/mnt/mars-fast/datasets/',
                     type = str, metavar='PATH', help='place where datasets are present')
+parser.add_argument('--save_root', default='/mnt/mars-delta/',
+                    type = str, metavar='PATH', help='place where datasets are present')
+
+args = parser.parse_args()
+
+import socket
+hostname = socket.gethostname()
+
+if hostname == 'mars':
+    args.root = '/mnt/mars-fast/datasets/'
+    args.save_root = '/mnt/mars-delta/'
+    args.vis_port = 8097
+elif hostname == 'sun':
+    args.root = '/mnt/sun-gamma/'
+    args.save_root = '/mnt/sun-gamma/'
+    args.vis_port = 8096
+elif hostname == 'mercury':
+    args.root = '/mnt/mercury-fast/datasets/'
+    args.save_root = '/mnt/mercury-beta/'
+    args.vis_port = 8098
 
 def set_bn_eval(m):
     classname = m.__class__.__name__
@@ -82,11 +102,11 @@ def set_bn_eval(m):
         m.eval()
 
 def main():
-    val_step = 25000
-    val_steps = [25000,]
+    val_step = 10000
+    val_steps = [10000,]
     train_step = 500
 
-    args = parser.parse_args()
+
     hostname = socket.gethostname()
 
     args.stepvalues = [int(val) for val in args.step_values.split(',')]
@@ -96,18 +116,18 @@ def main():
 
     args.exp_name = exp_name
     args.root += args.dataset+'/'
-    model_save_dir = args.root + 'cache/' + exp_name
+    model_save_dir = args.save_root + 'cache/' + exp_name
     if not os.path.isdir(model_save_dir):
         os.system('mkdir -p ' + model_save_dir)
 
     args.model_save_dir = model_save_dir
-    args.global_models_dir = os.path.expanduser(args.global_models_dir)
+    # args.global_models_dir = os.path.expanduser(args.global_models_dir)
 
     if args.visdom:
         import visdom
         viz = visdom.Visdom()
-        ports = {'mars':8097,'sun':8096}
-        viz.port = ports[hostname]
+        # ports = {'mars':8097,'sun':8096}
+        viz.port = args.vis_port
         viz.env = exp_name
 
         # initialize visdom loss plot
@@ -244,9 +264,9 @@ def main():
     print('Approx Epochs to RUN: {}, Start Ietration {} Max iterations {} # of samples in dataset {}'.format(
         approx_epochs, iteration, args.max_iterations, len(train_loader)))
     epoch = -1
-    # if args.ngpu > 1:
-    #     print('\n\nLets do dataparallel\n\n')
-    #     model = torch.nn.DataParallel(model)
+    if args.ngpu > 1:
+        print('\n\nLets do dataparallel\n\n')
+        model = torch.nn.DataParallel(model)
 
     model.train()
     model.apply(set_bn_eval)

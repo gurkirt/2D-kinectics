@@ -94,7 +94,7 @@ CUDA_VISIBLE_DEVICES=0 python3 test.py --root=/home/user/kinetics/ --input=rgb -
 ```
 -Note
   * By default it will compute frame-level scores and store them 
-  as well as compute frame-level `top1 & top3` accuracies using model from 500K-th iteration.
+  as well as compute frame-level `top1 & top3` accuracies using model from 60K-th iteration.
   * There is a log file file created for frame-level evaluation.
 
 ##### Video-level evaluation
@@ -105,44 +105,27 @@ function within. It will dump the video level output in json format
 Now you can specify the parameter in `eval.py` and evaluate
 
 ## Performance
-
+Table below records the performance of `resnet101` model on [Mini-Kinetics](https://github.com/s9xie/Mini-Kinetics-200) datasets. It is trained for 60K iteration with learning rate of `0.0005` and a drop by factor of 10 after `25000,40000,55000`. 
+Batch size used is 64.
+  
 <table style="width:100% th">
   <tr>
     <td> method </td>
-    <td>Num Frames</td>
     <td>frame-top1</td>
     <td>frame-top3</td>
     <td>video-top1</td>
     <td>video-top5</td>
-    <td>mean</td>
+    <td>video-AVG</td>
     <td>video-mAP</td>
   </tr>
   <tr>
-    <td align="left">RGB</td>
-    <td align="center">54.5</td>
-    <td align="center">70.7</td>
-    <td align="center">66.9</td>
-    <td align="center">85.7</td>
-    <td align="center">76.3</td>
-    <td align="center">70.1</td>
-  </tr>
-  <tr>
-    <td align="left">Flow</td> 
-    <td align="center">25.7</td>
-    <td align="center">39.7</td>
-    <td align="center">45.1</td>
-    <td align="center">69.7</td>
-    <td align="center">57.4</td>
-    <td align="center">46.6</td>
-  </tr>
-  <tr>
-    <td align="left">RGB+FLOW</td> 
-    <td align="center"> soon </td>
-    <td align="center"> soon </td>
-    <td align="center"> soon </td>
-    <td align="center"> soon </td>
-    <td align="center"> soon </td>
-    <td align="center"> soon </td>
+    <td align="left">Resnet101-RGB</td>
+    <td align="center">61.5</td>
+    <td align="center">77.9</td>
+    <td align="center">75.7</td>
+    <td align="center">92.2</td>
+    <td align="center">83.9</td>
+    <td align="center">78.1</td>
   </tr>
 </table>
 

@@ -187,6 +187,7 @@ class KINETICS(data.Dataset):
 
         self.datasubset = datasubset
         self.annot_file = self.root + "hfiles/Annots_{}.json".format(datasubset)
+        self.gtval_file = self.root + "hfiles/Annots_{}.json".format(datasubset)
 
         print('Annot File: ', self.annot_file, ' Mode is set to ', self.mode)
 

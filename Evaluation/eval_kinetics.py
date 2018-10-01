@@ -1,4 +1,4 @@
-import json
+import json, pdb
 try:
     import urllib.request as urllib2
 except ImportError:
@@ -68,14 +68,16 @@ class ANETclassification(object):
         with open(ground_truth_filename, 'r') as fobj:
             data = json.load(fobj)
         # Checking format
-
+        print()
         if not all([field in data.keys() for field in self.gt_fields]):
             raise IOError('Please input a valid ground truth file.')
 
         # Initialize data frame
         activity_index, cidx = {}, 0
         video_lst, label_lst = [], []
-        for videoid, v in data['database'].iteritems():
+        # pdb.set_trace()
+        for videoid in data['database'].keys():
+            v = data['database'][videoid]
             if self.subset != v['subset']:
                 continue
             if videoid in self.blocked_videos:
@@ -115,7 +117,9 @@ class ANETclassification(object):
 
         # Initialize data frame
         video_lst, label_lst, score_lst = [], [], []
-        for videoid, v in data['results'].iteritems():
+        # for videoid, v in data['results'].iteritems():
+        for videoid in data['results'].keys():
+            v = data['results'][videoid]
             # print videoid, v
             if videoid in self.blocked_videos:
                 continue
@@ -133,7 +137,7 @@ class ANETclassification(object):
         """Computes average precision for each class in the subset.
         """
         ap = np.zeros(len(self.activity_index.items()))
-        for activity, cidx in self.activity_index.iteritems():
+        for activity, cidx in self.activity_index.items():
             gt_idx = self.ground_truth['label'] == cidx
             pred_idx = self.prediction['label'] == cidx
             ap[cidx] = compute_average_precision_classification(
@@ -238,6 +242,7 @@ def compute_video_hit_at_k(ground_truth, prediction, top_k=3, avg=False):
     acc : float
         Top k accuracy score.
     """
+
     video_ids = np.unique(ground_truth['video-id'].values)
     avg_hits_per_vid = np.zeros(video_ids.size)
     for i, vid in enumerate(video_ids):
