@@ -122,6 +122,7 @@ def make_lists(annot_file, subsets, frame_step, seq_len=1, gap=1):
     vcount = -1
     image_list = []
     totalcount = 0
+    cc = 0
     # pdb.set_trace()
     for vid,videoname in enumerate(sorted(database.keys())):
         video_info = database[videoname]
@@ -131,6 +132,9 @@ def make_lists(annot_file, subsets, frame_step, seq_len=1, gap=1):
             label = 0
             vcount += 1
             numf = video_info['numf']
+            if numf<64:
+                cc += 1
+                # print(videoname,vid,cc,numf)
             if numf > seq_len * 2:
                 if 'test' not in subsets:
                     label = video_info['cls']
@@ -142,6 +146,7 @@ def make_lists(annot_file, subsets, frame_step, seq_len=1, gap=1):
                         image_list.append([vcount, int(fid + 1), label])
             video_labels.append(label)
     print('{} Images loaded from {} videso'.format(totalcount, vcount))
+    print('cc = ',cc)
     return image_list, video_list, classes, video_labels
 
 
@@ -153,7 +158,6 @@ class KINETICS(data.Dataset):
         input_type (string): input tuep for example rgb, farneback, brox etc
 
     """
-
     def __init__(self, root, input_type, transform=None, target_transform=None,
                  dataset_name='kinectics', datasubset='200', subsets=['train',], exp_name='',
                  netname='inceptionv3', scale_size=321, input_size=299,

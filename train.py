@@ -29,12 +29,16 @@ np.random.seed(123)
 torch.manual_seed(123)
 torch.cuda.manual_seed_all(123)
 
+def str2bool(v):
+    return v.lower() in ("yes", "true", "t", "1")
+
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('--dataset', metavar='NAME', default='kinetics',  help='path to dataset')
 parser.add_argument('--datasubset', metavar='NAME', default='200', help='path to dataset')
 parser.add_argument('--arch', '-a', metavar='ARCH', default='resnet101', help='model architectures ')
 ## parameters for dataloader
 parser.add_argument('--input', '-i', metavar='INPUT', default='rgb', help='input image type')
+parser.add_argument('--isize', '--is', metavar='N', default=112, type=int, help='input image size')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers (default: 4)')
 parser.add_argument('--seq_len', default=1, type=int, metavar='N',
                     help='seqence length')
@@ -64,13 +68,13 @@ parser.add_argument('--gamma', default=0.1, type=float,
 ## logging parameters
 parser.add_argument('--print-freq', '-p', default=20, type=int,
                     metavar='N', help='print frequency (default: 10)')
-parser.add_argument('--resume', default=False, type=bool, metavar='B',
+parser.add_argument('--resume', default=False, type=str2bool, metavar='B',
                     help='path to latest checkpoint (default: none)')
-parser.add_argument('--visdom', default=False, type=bool, metavar='B',
+parser.add_argument('--visdom', default=False, type=str2bool, metavar='B',
                     help='weather to use visdom (default: True)')
 parser.add_argument('--global_models_dir', default='/mnt/mars-beta/global-models/pytorch-imagenet',
                     type = str, metavar='PATH', help='place where pre-trained models are ')
-parser.add_argument('--pretrained', default=True, type=bool,
+parser.add_argument('--pretrained', default=0, type=int,
                     help='use pre-trained model default (True)')
 ## directory
 parser.add_argument('--root', default='/mnt/mars-fast/datasets/',
@@ -111,11 +115,13 @@ def main():
 
     args.stepvalues = [int(val) for val in args.step_values.split(',')]
 
-    exp_name = '{}-{}-{}-{}-sl{:02d}-g{:d}-fs{:d}-{}-{:06d}'.format(args.dataset,args.datasubset,
-                args.arch, args.input, args.seq_len, args.gap, args.frame_step, args.batch_size, int(args.lr * 1000000))
+    exp_name = '{}-{}-{}-{}--P{:d}-is{:d}-sl{:02d}-g{:d}-fs{:d}-{}-{:06d}'.format(args.dataset,args.datasubset,
+                args.input, args.arch, args.pretrained, args.isize, args.seq_len, args.gap,
+                                args.frame_step, args.batch_size, int(args.lr * 1000000))
 
     args.exp_name = exp_name
     args.root += args.dataset+'/'
+    args.save_root += args.dataset+'/'
     model_save_dir = args.save_root + 'cache/' + exp_name
     if not os.path.isdir(model_save_dir):
         os.system('mkdir -p ' + model_save_dir)
@@ -155,6 +161,7 @@ def main():
 
     ## load dataloading configs
     input_size, means, stds = get_mean_size(args.arch)
+    input_size = args.isize
     normalize = transforms.Normalize(mean=means,
                                      std=stds)
 

@@ -7,7 +7,7 @@ import torch
 def initialise_model(args):
     # create model
     if args.arch.find('inceptionV3') > -1:
-        if args.pretrained:
+        if args.pretrained>0:
             print("=> using pre-trained model '{}'".format(args.arch))
             print("NUmber of classes will be ", args.num_classes)
             model = inception_v3(num_classes=args.num_classes, pretrained=True, global_models_dir=args.global_models_dir, seq_len=args.seq_len)
@@ -15,7 +15,7 @@ def initialise_model(args):
             print("=> creating model '{}'".format(args.arch))
             model = inception_v3(num_classes=args.num_classes, seq_len=args.seq_len)
     elif args.arch.find('vgg') > -1:
-        if args.pretrained:
+        if args.pretrained>0:
             print("=> using pre-trained model '{}'".format(args.arch))
             model = vggnet(num_classes=args.num_classes, pretrained=True, global_models_dir=args.global_models_dir, seq_len=args.seq_len)
         else:
@@ -25,7 +25,8 @@ def initialise_model(args):
         modelperms = {'resnet18': [2, 2, 2, 2], 'resent34': [3, 4, 6, 3], 'resnet50': [3, 4, 6, 3],
                       'resnet101': [3, 4, 23, 3], 'resent152': [3, 8, 36, 3]}
         model = resnet(modelperms[args.arch], args.arch, args.seq_len, args.num_classes)
-        if args.pretrained:
+        print('pretrained:: ', args.pretrained)
+        if args.pretrained>0:
             load_dict = torch.load(args.global_models_dir + '/' + args.arch+'.pth')
             # print(load_dict.keys(), '\n\n', model.state_dict().keys())
             model.load_my_state_dict(load_dict, args.seq_len)
